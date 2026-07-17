@@ -1,0 +1,364 @@
+  
+  
+  
+  
+-- ==================================================  
+-- システム名   営業情報マスタシステム  
+-- サブシステム名  他シスIFデータ作成  
+-- アプリケーション名 PVT_XP_2001  
+-- 処理概要    DDWORKS21医師マスタデータ作成  
+-- 作成者    Intage  
+-- 更新日    2012/11/26  
+--      2018/11/13 個人情報削除の対応  
+-- パラメータ   IN ：  
+--      OUT：  
+--       @o_ret  
+-- ==================================================  
+CREATE PROCEDURE [dbo].[PVT_XP_2001]  
+(  
+ @o_ret int output  
+)  
+AS  
+ DECLARE @ret   int  
+ DECLARE @val   int  
+ DECLARE @progname  varchar (40)  
+ DECLARE @username  varchar (20)  
+ DECLARE @step   int  
+ DECLARE @ins_cnt  int  
+ DECLARE @upd_cnt  int  
+ DECLARE @del_cnt  int  
+ DECLARE @message  varchar (2000)  
+ DECLARE @tag_date  DATE  
+ DECLARE @now_date  DATETIME  
+ DECLARE @datawhere  varchar (20)  
+    
+BEGIN  
+  
+ BEGIN TRY  
+  
+  set @progname = 'PVT_XP_2001'  
+  set @username = 'BATCH'  
+  set @step = 0  
+  set @ret = 0  
+  set @ins_cnt = 0  
+  set @upd_cnt = 0  
+  set @del_cnt = 0  
+  set @message = ''  
+  set @datawhere = 'NYURYOKU3'  
+    
+  --ログ出力（開始）  
+  exec @val = dbo.PVZ_XP_9001 @progname, 'STR', 0, @step, '', 0, 0, 0, ''  
+  if @val <> 0  
+   begin  
+    RAISERROR ('', 11, 1)  
+   end  
+  
+  -- トランザクション開始  
+  BEGIN TRANSACTION  
+  
+   -- 現在日付  
+   set @now_date = GETDATE()  
+  
+   -- 日付取得  
+   set @step = @step + 10  
+   set @ins_cnt = 0  
+   set @upd_cnt = 0  
+   set @del_cnt = 0  
+   set @message = '日付取得<' + @datawhere + '>'  
+  
+   SELECT  
+    @tag_date = Hizuke  
+   FROM  
+    PVZ_M_HIZUKE_KANRI  
+   WHERE  
+    Hizuke_KBN = @datawhere  
+  
+   --ログ出力（詳細）  
+   exec @val = dbo.PVZ_XP_9001 @progname, 'DTL', 0, @step, '', @ins_cnt, @upd_cnt, @del_cnt, @message  
+   if @val <> 0  
+    begin  
+     RAISERROR ('', 11, 1)  
+    end  
+  
+  
+   --ワーク削除  
+   set @step = @step + 10  
+   set @ins_cnt = 0  
+   set @upd_cnt = 0  
+   set @del_cnt = 0  
+   set @message = 'ワーク削除'  
+  
+   set @del_cnt = (select count (*) from dbo.PVT_GW_LKLDDS02)  
+  
+   TRUNCATE TABLE PVT_GW_LKLDDS02  
+  
+   --ログ出力（詳細）  
+   exec @val = dbo.PVZ_XP_9001 @progname, 'DTL', 0, @step, 'PVT_GW_LKLDDS02', @ins_cnt, @upd_cnt, @del_cnt, @message  
+   if @val <> 0  
+    begin  
+     RAISERROR ('', 11, 1)  
+    end  
+  
+  
+   --全件テーブルにないデータのキー挿入  
+   set @step = @step + 10  
+   set @ins_cnt = 0  
+   set @upd_cnt = 0  
+   set @del_cnt = 0  
+   set @message = '全件テーブルにないキーの挿入'  
+  
+   INSERT INTO PVT_GW_LKLDDS02_ALL  
+   (  
+    Jujisha_CD  
+    ,Sakusei_DT  
+    ,Koshin_DT  
+    ,KoshinProgram_ID  
+   )  
+   SELECT  
+    Jujisha_CD  
+    ,@now_date  
+    ,@now_date  
+    ,@progname  
+   FROM  
+   (  
+    SELECT *  
+    FROM  
+     PVT_OM_JUJISHA_ALL  
+    WHERE  
+     Del_FLG = '0'  
+     AND TekiyoKaishi_DT <= @tag_date  
+     AND TekiyoShuryo_DT >= @tag_date  
+     AND Shokushu = '1'     --医師のみ  
+   ) ju  
+   WHERE  
+    not exists   
+    (   
+     select   
+      *    
+     from   
+      PVT_GW_LKLDDS02_ALL as al  
+     where   
+      ju.Jujisha_CD = al.Jujisha_CD  
+    )  
+  
+   SET @ins_cnt = @@ROWCOUNT  
+  
+   --ログ出力（詳細）  
+   exec @val = dbo.PVZ_XP_9001 @progname, 'DTL', 0, @step, 'PVT_GW_LKLDDS02_ALL', @ins_cnt, @upd_cnt, @del_cnt, @message  
+   if @val <> 0  
+    begin  
+     RAISERROR ('', 11, 1)  
+    end  
+  
+  
+   --全件テーブルの更新  
+   set @step = @step + 10  
+   set @ins_cnt = 0  
+   set @upd_cnt = 0  
+   set @del_cnt = 0  
+   set @message = '全件テーブルの項目更新'  
+  
+   UPDATE PVT_GW_LKLDDS02_ALL  
+   SET  
+    Kojin_CD = a.Kojin_CD  
+    ,Shimei_KJ = a.Shimei_KJ  
+    ,Shimei_KN = a.Shimei_KN  
+    ,Seinengappi = a.Seinengappi  
+    ,Yubin_No = a.Yubin_No  
+    ,JitakuJusho_KJ = a.JitakuJusho_KJ  
+    ,Seibetsu = a.Seibetsu  
+    ,Todohuken_KJ = a.Todohuken_KJ  
+    ,Shusshinko_KJ = a.Shusshinko_KJ  
+    ,Shusshinko_CD = a.Shusshinko_CD  
+    ,Sotsunen = a.Sotsunen  
+    ,JitakuTEL = a.JitakuTEL  
+    ,JitakuFAX = a.JitakuFAX  
+    ,KeitaiTEL = a.KeitaiTEL  
+    ,Shusei_KBN = a.Shusei_KBN  
+    ,Koshin_DT = a.Koshin_DT  
+    ,KoshinProgram_ID = a.KoshinProgram_ID  
+   FROM  
+   (  
+    SELECT  
+     '' as Kojin_CD  
+     ,jm.Jujisha_CD  
+     ,convert(varchar(20),jm.Shimei_KJ) as Shimei_KJ  
+     ,convert(varchar(18),jm.Shimei_KN) as Shimei_KN  
+     ,CASE datalength(ltrim(rtrim(isnull(jm.Seinengappi,''))))  
+      WHEN 8 THEN substring(jm.Seinengappi,1,4) + '/' + substring(jm.Seinengappi,5,2) + '/' + substring(jm.Seinengappi,7,2)  
+      ELSE ''  
+      END AS Seinengappi  
+     ,CASE datalength(ltrim(rtrim(isnull(jw.Yubin_No,''))))  
+      WHEN 7 THEN substring(jw.Yubin_No,1,3) + '-' + substring(jw.Yubin_No,4,4)  
+      ELSE ''  
+      END AS Yubin_No  
+     ,convert(varchar(108),jw.TodohukenE + jw.ShikugunE + jw.ChosonE + jw.BanchiE) as JitakuJusho_KJ  
+     ,CASE jm.Seibetsu  
+      WHEN '1' THEN '1'  
+      WHEN '2' THEN '2'  
+      ELSE '9'  
+      END AS Seibetsu  
+     ,convert(varchar(8),mm1.GenkoMeisho_KJ1) as Todohuken_KJ  
+     ,convert(varchar(20),mm2.GenkoMeisho_KJ1) as Shusshinko_KJ  
+     ,mm2.MeishoE_CD as Shusshinko_CD  
+     ,jm.Sotsunen as Sotsunen  
+     ,'' as JitakuTEL  
+     ,'' as JitakuFAX  
+     ,'' as KeitaiTEL  
+     ,CASE  
+      WHEN jm.Shusei_KBN = 'C' THEN '1'  
+      ELSE '0'  
+      END AS Shusei_KBN  
+     ,@now_date as Koshin_DT  
+     ,@progname as KoshinProgram_ID  
+    FROM  
+    (  
+     SELECT  
+      *  
+     FROM  
+      PVT_OM_JUJISHA_ALL  
+     WHERE  
+       Del_FLG = '0'  
+      AND TekiyoKaishi_DT <= @tag_date  
+      AND TekiyoShuryo_DT >= @tag_date  
+      AND Shokushu = '1'     --医師のみ  
+    ) jm  
+    LEFT JOIN PVT_OM_JUJISHA_JUSHO_ALL AS jw ON  
+      jw.Shusei_KBN <> 'C'  
+      AND jw.Del_FLG = '0'  
+      AND jw.TekiyoKaishi_DT <= @tag_date  
+      AND jw.TekiyoShuryo_DT >= @tag_date  
+      AND jm.Jujisha_CD = jw.Jujisha_CD  
+    LEFT JOIN  
+    (  
+     SELECT  
+      *  
+     FROM  
+      dbo.PVT_XF_GetYuko_M_MEISHO(@tag_date)  
+     WHERE  
+       Del_FLG = '0'  
+      AND MeishoBunrui_CD = 'PVT_00020'  
+    ) mm1  
+    ON  
+     jm.Todohuken_CD = mm1.MeishoU_CD  
+    LEFT JOIN  
+    (  
+     SELECT  
+      *  
+     FROM  
+      dbo.PVT_XF_GetYuko_M_MEISHO(@tag_date)  
+     WHERE  
+       Del_FLG = '0'  
+      AND MeishoBunrui_CD = 'PVT_00010'  
+    ) mm2  
+    ON  
+     jm.Shusshinko_CD = mm2.MeishoU_CD   
+   ) a  
+  
+   WHERE  
+    PVT_GW_LKLDDS02_ALL.Jujisha_CD = a.Jujisha_CD  
+    AND (  
+         isnull(PVT_GW_LKLDDS02_ALL.Shimei_KJ,'') <> isnull(a.Shimei_KJ,'')  
+      or isnull(PVT_GW_LKLDDS02_ALL.Shimei_KN,'') <> isnull(a.Shimei_KN,'')  
+--2018/11/13      --or isnull(PVT_GW_LKLDDS02_ALL.Seinengappi,'') <> isnull(a.Seinengappi,'')  
+--2018/11/13      --or isnull(PVT_GW_LKLDDS02_ALL.Yubin_No,'') <> isnull(a.Yubin_No,'')  
+--2018/11/13      --or isnull(PVT_GW_LKLDDS02_ALL.JitakuJusho_KJ,'') <> isnull(a.JitakuJusho_KJ,'')  
+      or isnull(PVT_GW_LKLDDS02_ALL.Seibetsu,'') <> isnull(a.Seibetsu,'')  
+--2018/11/13      --or isnull(PVT_GW_LKLDDS02_ALL.Todohuken_KJ,'') <> isnull(a.Todohuken_KJ,'')  
+      or isnull(PVT_GW_LKLDDS02_ALL.Shusshinko_KJ,'') <> isnull(a.Shusshinko_KJ,'')  
+      or isnull(PVT_GW_LKLDDS02_ALL.Shusshinko_CD,'') <> isnull(a.Shusshinko_CD,'')  
+      or isnull(PVT_GW_LKLDDS02_ALL.Sotsunen,'') <> isnull(a.Sotsunen,'')  
+      or isnull(PVT_GW_LKLDDS02_ALL.Shusei_KBN,'') <> isnull(a.Shusei_KBN,'')  
+      or PVT_GW_LKLDDS02_ALL.Sakusei_DT = @now_date  
+     )  
+  
+   SET @upd_cnt = @@ROWCOUNT  
+  
+   --ログ出力（詳細）  
+   exec @val = dbo.PVZ_XP_9001 @progname, 'DTL', 0, @step, 'PVT_GW_LKLDDS02_ALL', @ins_cnt, @upd_cnt, @del_cnt, @message  
+   if @val <> 0  
+    begin  
+     RAISERROR ('', 11, 1)  
+    end  
+  
+   --ワークテーブルの作成  
+   set @step = @step + 10  
+   set @ins_cnt = 0  
+   set @upd_cnt = 0  
+   set @del_cnt = 0  
+   set @message = 'ワークテーブルの作成'  
+  
+   INSERT INTO PVT_GW_LKLDDS02  
+   SELECT  
+    Kojin_CD  
+    ,Jujisha_CD  
+    ,dbo.PVZ_XF_ValuePad(Shimei_KJ,'10','R','　') as Shimei_KJ  
+    ,Shimei_KN  
+    ,'' as Seinengappi   --2018/11/13  
+    ,'' as Yubin_No    --2018/11/13  
+    --,dbo.PVZ_XF_ValuePad(JitakuJusho_KJ,'54','R','　') as JitakuJusho_KJ --2018/11/13  
+    ,replicate('　',54) as JitakuJusho_KJ  
+    ,Seibetsu  
+    --,dbo.PVZ_XF_ValuePad(Todohuken_KJ,'4','R','　') as Todohuken_KJ  --2018/11/13  
+    ,replicate('　',4) as Todohuken_KJ  
+    ,dbo.PVZ_XF_ValuePad(Shusshinko_KJ,'10','R','　') as Shusshinko_KJ  
+    ,Shusshinko_CD  
+    ,Sotsunen  
+    ,'' as JitakuTEL   --2018/11/13  
+    ,'' as JitakuFAX   --2018/11/13  
+    ,'' as KeitaiTEL   --2018/11/13  
+    ,convert(varchar(10),Koshin_DT,111) as Koshin_DT  
+    ,Shusei_KBN  
+   FROM  
+    PVT_GW_LKLDDS02_ALL  
+   WHERE  
+    Koshin_DT = @now_date  
+  
+   SET @ins_cnt = @@ROWCOUNT  
+  
+   --ログ出力（詳細）  
+   exec @val = dbo.PVZ_XP_9001 @progname, 'DTL', 0, @step, 'PVT_GW_LKLDDS02', @ins_cnt, @upd_cnt, @del_cnt, @message  
+   if @val <> 0  
+    begin  
+     RAISERROR ('', 11, 1)  
+    end  
+  
+  
+   --戻り値設定（正常）  
+   set @ret = 0  
+   set @o_ret = @ret  
+  
+   --ログ出力（終了）  
+   exec @val = dbo.PVZ_XP_9001 @progname, 'END', @ret, @step, '', 0, 0, 0, ''  
+   if @val <> 0  
+    begin  
+     RAISERROR ('', 11, 1)  
+    end  
+  
+   -- コミット  
+   commit transaction  
+  
+ END TRY  
+ BEGIN CATCH  
+  
+  -- トランザクションのロールバック  
+  IF @@TRANCOUNT>0  
+   BEGIN  
+    ROLLBACK TRANSACTION  
+   END  
+  
+   --戻り値設定（異常）  
+   set @ret = 2  
+   set @o_ret = @ret  
+  
+   --ログ出力  
+   set @message = @message + '：' + isnull (ERROR_MESSAGE (), '')  
+   exec @val = dbo.PVZ_XP_9001 @progname, 'ERR', @ret, @step, '', 0, 0, 0, @message  
+   exec @val = dbo.PVZ_XP_9001 @progname, 'END', @ret, @step, '', 0, 0, 0, ''  
+  
+ END CATCH  
+END  
+  
+  
+  
+  

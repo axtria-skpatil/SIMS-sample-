@@ -1,0 +1,759 @@
+  
+-- ==================================================  
+-- システム名  営業情報マスタシステム  
+-- サブシステム名 他シスIFデータ作成  
+-- アプリケーション名 PVS_XP_4009  
+-- 処理概要  DDWORKS21施設マスタデータ作成  
+-- 作成者  Intage  
+-- 更新日  2012/11/20  
+-- 更新日  2013/1/23市川  
+--   2013/5/10村松 ARTディティールアロケーション向上対応  
+--   2023/1/30 ITSP 現行保障用テーブルを公開ハブに変更  
+-- パラメータ  IN ：  
+--   OUT：  
+--    @o_ret  
+-- ==================================================  
+CREATE PROCEDURE [dbo].[PVS_XP_4009]  
+(  
+ @o_ret int output  
+)  
+AS  
+ DECLARE @ret   int  
+ DECLARE @val   int  
+ DECLARE @progname  varchar (40)  
+ DECLARE @username  varchar (20)  
+ DECLARE @step   int  
+ DECLARE @ins_cnt  int  
+ DECLARE @upd_cnt  int  
+ DECLARE @del_cnt  int  
+ DECLARE @message  varchar (2000)  
+ DECLARE @tag_date  DATE  --JUJISHA_E  
+ DECLARE @tag_date2  DATE  --KAKUTEI  
+ DECLARE @tag_date3  DATE  --KAKUTEI（次月）2023/01/30 ADD  
+ DECLARE @Zen_date  DATETIME --前回処理日  
+ DECLARE @datacount  int      
+ DECLARE @datawhere  varchar (20)  
+ DECLARE @datawhere2  varchar (20)  
+  
+BEGIN  
+  
+ BEGIN TRY  
+  
+  set @progname = 'PVS_XP_4009'  
+  set @username = 'BATCH'  
+  set @step = 0  
+  set @ret = 0  
+  set @ins_cnt = 0  
+  set @upd_cnt = 0  
+  set @del_cnt = 0  
+  set @message = ''  
+  set @datacount = 0  
+  set @datawhere = 'JUJISHA_E'  
+  set @datawhere2 = 'KAKUTEI'  
+    
+  --ログ出力（開始）  
+  set @step = 10  
+  exec @val = PVZ_XP_9001 @progname, 'STR', 0, @step, '', 0, 0, 0, ''  
+  if @val <> 0  
+  
+   begin  
+    RAISERROR ('', 11, 1)  
+   end  
+  
+/** 2023/01/30 再作成のためDEL　開始１  
+   -- 一時テーブル作成  
+   ---- 抽出対象現行保証施設  
+   CREATE TABLE #WK_GT_SST  
+   (  
+    Getudo_K     varchar (1),  
+    Shisetsu_CD     varchar (6),  
+    Heihai_KBN     varchar (1),  
+    Shisetsu_KJ     varchar (40),  
+    Shisetsu_KJR    varchar (20),  
+    Shisetsu_KJK    varchar (10),  
+    Shisetsu_KN     varchar (25),  
+    Shisetsu_KNR    varchar (10),  
+    Jusho_CD     varchar (9),  
+    Banchi_KJ     varchar (40),  
+    Banchi_KN     varchar (30),  
+    TEL_NO_1     varchar (13),  
+    Tantosha_CD     varchar (5),  
+    ShisetsuShugou_KBN   varchar (1),  
+    ShisetsuShugou_CD   varchar (6),  
+    ShisetsuDaihyoShugou_CD  varchar (6),  
+    ShisetsuIyaku_KBN   varchar (1),  
+    Hanro_CD     varchar (2),  
+    Hosen_KBN     varchar (1),  
+    Kaisetsusha_CD    varchar (2),  
+    Kaisetsu_KBN    varchar (2),  
+    ByoinKino_KBN    varchar (1),  
+    KonyuYosangaku_1   int,  
+    KonyuYosangaku_2   int,  
+    Shijosei     int,  
+    ByoinKBN_Shobunrui   varchar (1),  
+    ShisetsuKino_KBN   varchar (1),  
+    KonyuGroup_KBN    varchar (1),  
+    ShisetsuKetai_KBN   varchar (1),  
+    ShinryoKamoku_CD_1   varchar (2),  
+    ShinryoKamoku_CD_2   varchar (2),  
+    ShinryoKamoku_CD_3   varchar (2),  
+    ShinryoKamoku_CD_4   varchar (2),  
+    ShinryoKamoku_CD_5   varchar (2),  
+    ShinryoKamoku_CD_6   varchar (2),  
+    ShinryoKamoku_CD_7   varchar (2),  
+    ShinryoKamoku_CD_8   varchar (2),  
+    ShinryoKamoku_CD_9   varchar (2),  
+    ShinryoKamoku_CD_10   varchar (2),  
+    ShinryoKamoku_CD_11   varchar (2),  
+    ShinryoKamoku_CD_12   varchar (2),  
+    ShinryoKamoku_CD_13   varchar (2),  
+    ShinryoKamoku_CD_14   varchar (2),  
+    ShinryoKamoku_CD_15   varchar (2),  
+    ShinryoKamoku_CD_16   varchar (2),  
+    ShinryoKamoku_CD_17   varchar (2),  
+    ShinryoKamoku_CD_18   varchar (2),  
+    ShinryoKamoku_CD_19   varchar (2),  
+    ShinryoKamoku_CD_20   varchar (2),  
+    ShinryoKamoku_CD_21   varchar (2),  
+    ShinryoKamoku_CD_22   varchar (2),  
+    ShinryoKamoku_CD_23   varchar (2),  
+    ShinryoKamoku_CD_24   varchar (2),  
+    ShinryoKamoku_CD_25   varchar (2),  
+    ShinryoKamoku_CD_26   varchar (2),  
+    ShinryoKamoku_CD_27   varchar (2),  
+    ShinryoKamoku_CD_28   varchar (2),  
+    ShinryoKamoku_CD_29   varchar (2),  
+    ShinryoKamoku_CD_30   varchar (2),  
+    ShuShinryoKamoku_FLG_1  varchar (1),  
+    ShuShinryoKamoku_FLG_2  varchar (1),  
+    ShuShinryoKamoku_FLG_3  varchar (1),  
+    ShuShinryoKamoku_FLG_4  varchar (1),  
+    ShuShinryoKamoku_FLG_5  varchar (1),  
+    ShuShinryoKamoku_FLG_6  varchar (1),  
+    ShuShinryoKamoku_FLG_7  varchar (1),  
+    ShuShinryoKamoku_FLG_8  varchar (1),  
+    ShuShinryoKamoku_FLG_9  varchar (1),  
+    ShuShinryoKamoku_FLG_10  varchar (1),  
+    ShuShinryoKamoku_FLG_11  varchar (1),  
+    ShuShinryoKamoku_FLG_12  varchar (1),  
+    ShuShinryoKamoku_FLG_13  varchar (1),  
+    ShuShinryoKamoku_FLG_14  varchar (1),  
+    ShuShinryoKamoku_FLG_15  varchar (1),  
+    ShuShinryoKamoku_FLG_16  varchar (1),  
+    ShuShinryoKamoku_FLG_17  varchar (1),  
+    ShuShinryoKamoku_FLG_18  varchar (1),  
+    ShuShinryoKamoku_FLG_19  varchar (1),  
+    ShuShinryoKamoku_FLG_20  varchar (1),  
+    ShuShinryoKamoku_FLG_21  varchar (1),  
+    ShuShinryoKamoku_FLG_22  varchar (1),  
+    ShuShinryoKamoku_FLG_23  varchar (1),  
+    ShuShinryoKamoku_FLG_24  varchar (1),  
+    ShuShinryoKamoku_FLG_25  varchar (1),  
+    ShuShinryoKamoku_FLG_26  varchar (1),  
+    ShuShinryoKamoku_FLG_27  varchar (1),  
+    ShuShinryoKamoku_FLG_28  varchar (1),  
+    ShuShinryoKamoku_FLG_29  varchar (1),  
+    ShuShinryoKamoku_FLG_30  varchar (1),  
+    ByoShosu_1     int,  
+    ByoShosu_2     int,  
+    ByoShosu_3     int,  
+    ByoShosu_4     int,  
+    ByoShosu_5     int,  
+    ShinryoHoshu_KBN_2   varchar (1),  
+    ShinryoHoshu_KBN_1   varchar (1),  
+    LC_KBN      varchar (1),  
+    ShinryoHoshu_KBN_3   varchar (1),  
+    KaigoShisetsu_KBN   varchar (1),  
+    ShisetsuIgasan_CD   varchar (6),  
+    P2Tantosha_CD    varchar (5),  
+    P2_KBN      varchar (1),  
+    Kigyo_CD     varchar (4),  
+    Voluntary_CD    varchar (4),  
+    IyakuNenshoGaku_1   int,  
+    IyakuNenshoGaku_2   int,  
+    IyakuNenshoGaku_3   int,  
+    SoNenshoGaku_1    int,  
+    SoNenshoGaku_2    int,  
+    SoNenshoGaku_3    int,  
+    HanroNiji_KBN    varchar (1),  
+    UribaShikibetsu_CD_1  varchar (1),  
+    UribaShikibetsu_CD_2  varchar (1),  
+    UribaShikibetsu_CD_3  varchar (1),  
+    UribaShikibetsu_CD_4  varchar (1),  
+    UribaShikibetsu_CD_5  varchar (1),  
+    UribaShikibetsu_CD_6  varchar (1),  
+    UribaShikibetsu_CD_7  varchar (1),  
+    DM_KBN      varchar (1),  
+    YakushoToroku_KBN   varchar (1),  
+    KeieiKeitai_KBN    varchar (1),  
+    ShozaiHanro_KBN    varchar (1),  
+    Hansoku_KBN     varchar (1),  
+    AJD_CD      varchar (3),  
+    NID_CD      varchar (3),  
+    KakakuTorokuten_KBN   varchar (1),  
+    YakuGyotai_CD    varchar (2),  
+    EigyoKyoka_KBN    varchar (1),  
+    VoluntaryChainSetsuritsu_KBN varchar (1),  
+    Sakusei_DT     varchar (8),  
+    Koshin_DT     varchar (8),  
+    Koshinsha_ID    varchar (5),  
+    Heihai_DT     varchar (8),  
+    Jusho_KJ     varchar (100)  
+   )  
+ 2023/01/30 再作成のためDEL　終了１ **/  
+  
+--  2023/01/30 再作成のためADD　開始１  
+   -- 一時テーブル作成  
+   ---- 抽出対象現行保証施設  
+   CREATE TABLE #WK_GT_SST  
+   (  
+    Shisetsu_CD     varchar (6),  
+    Tantosha_CD     varchar (5),  
+    Shisetsu_KJ     varchar (40),  
+    Shisetsu_KJR     varchar (20),  
+    Shisetsu_KN     varchar (25),  
+    Heihai_KBN     varchar (1)  
+   )  
+--  2023/01/30 再作成のためADD　終了１  
+  
+  -- トランザクション開始  
+  BEGIN TRANSACTION  
+  
+   -- 従事者日付取得  
+   set @tag_date =(  
+       SELECT  
+        Hizuke  
+       FROM  
+        PVZ_M_HIZUKE_KANRI  
+       WHERE  
+        Hizuke_KBN = @datawhere  
+       )  
+   -- 確定日付取得  
+   set @tag_date2 =(  
+       SELECT  
+        Hizuke  
+       FROM  
+        PVZ_M_HIZUKE_KANRI  
+       WHERE  
+        Hizuke_KBN = @datawhere2  
+       )  
+   -- 次月確定日付取得 2023/01/30 ADD  
+   set @tag_date3 =(  
+       SELECT  
+        CASE    
+         WHEN MONTH([Hizuke]) < 12  
+         THEN CONVERT(DATETIME,SUBSTRING(CONVERT(VARCHAR(50),Hizuke,21),1,5)  
+          + SUBSTRING(CONVERT(VARCHAR(50),(DATEADD(month,1,Hizuke))),1,2)  
+          + '-01',21)  
+         ELSE CONVERT(DATETIME,SUBSTRING(CONVERT(VARCHAR(50),DATEADD(YEAR,1,Hizuke),21),1,4) + '-'+  
+          + SUBSTRING(CONVERT(VARCHAR(50),(DATEADD(month,1,Hizuke))),1,2)  
+          + '-01',21)     
+        END  AS Hizuke  
+       FROM  
+        PVZ_M_HIZUKE_KANRI  
+       WHERE  
+        Hizuke_KBN = @datawhere2  
+       )  
+  
+   -- 前回ファイル作成レコード件数取得  
+   SET @datacount =(   
+       SELECT  
+        count(*)  
+       FROM  
+        PVZ_GT_SKMINTFMGMT  
+       WHERE  
+        FILEID = 'LKLDDS01'  
+       )  
+  
+   -- レコード件数が0の場合新規レコード作成  
+   IF @datacount = 0  
+    BEGIN  
+     INSERT INTO PVZ_GT_SKMINTFMGMT  
+     (  
+      FILEID  
+        ,SENDRECVDH     
+     )  
+     VALUES  
+     (  
+      'LKLDDS01'  
+      ,'1900/01/01'  
+     )  
+  
+     set @Zen_date = '1900/01/01' --追加（2013/1/23）  
+    END  
+      
+   -- 前回処理日時の取得(データがNULLの場合初期値を設定して全件対象にする)  
+   set @Zen_date =(  
+       SELECT  
+        isnull(SENDRECVDH,'1900-01-01 00:00:00.000')  
+       FROM  
+        PVZ_GT_SKMINTFMGMT  
+       WHERE  
+        FILEID = 'LKLDDS01'  
+         )  
+       
+   -- 現行保証マスタ切替(当月/次月)  
+  
+/** 2023/01/30 再作成のためDEL　開始２  
+  
+   if CONVERT(varchar(6), @tag_date, 112) > CONVERT(varchar(6), @tag_date2, 112)  
+    begin  
+     -- ワークデータ作成  
+     ---- 次月(抽出対象現行保証施設)  
+     INSERT INTO  
+      #WK_GT_SST  
+     SELECT  
+      *  
+     FROM  
+      PVS_GT_SHISETSU_2  
+  
+     --ログ出力（詳細）  
+     SET @ins_cnt = @@ROWCOUNT  
+     SET @step = @step + 10  
+     exec @val = PVZ_XP_9001 @progname, 'DTL', 0, @step, 'ワークデータ作成 - 次月(現行保証施設)', @ins_cnt, @upd_cnt, @del_cnt, @message  
+     if @val <> 0  
+      begin  
+       RAISERROR ('', 11, 1)  
+      end  
+     SET @ins_cnt = 0  
+     SET @upd_cnt = 0  
+     SET @del_cnt = 0  
+    end  
+   else  
+    begin  
+     -- ワークデータ作成  
+     ---- 当月(抽出対象現行保証施設)  
+     INSERT INTO  
+      #WK_GT_SST  
+     SELECT  
+      *  
+     FROM  
+      PVS_GT_SHISETSU_1  
+  
+     --ログ出力（詳細）  
+     SET @ins_cnt = @@ROWCOUNT  
+     SET @step = @step + 10  
+     exec @val = PVZ_XP_9001 @progname, 'DTL', 0, @step, 'ワークデータ作成 - 当月(現行保証施設)', @ins_cnt, @upd_cnt, @del_cnt, @message  
+     if @val <> 0  
+      begin  
+       RAISERROR ('', 11, 1)  
+      end  
+     SET @ins_cnt = 0  
+     SET @upd_cnt = 0  
+     SET @del_cnt = 0  
+    end  
+  
+2023/01/30 再作成のためDEL　終了２ **/   
+--  2023/01/30 再作成のためADD　開始２  
+  
+   if CONVERT(varchar(6), @tag_date, 112) > CONVERT(varchar(6), @tag_date2, 112)  
+    begin  
+     INSERT INTO  
+      #WK_GT_SST  
+     SELECT  
+      c.[Shisetsu_CD]  
+      ,CASE WHEN RTRIM(c.[ShisetsuIyaku_KBN]) = '1'  
+      /* 医の場合（医薬区分："1"） */  
+       THEN CASE WHEN RTRIM(e.[Tantosha_CD]) = ''  
+        THEN NULL  
+        ELSE RTRIM(e.[Tantosha_CD])  
+        END  
+        WHEN RTRIM(c.[ShisetsuIyaku_KBN]) = '2'  
+      /* 薬の場合（医薬区分："2"） */  
+       THEN CASE WHEN RTRIM(d.[Tantosha_CD]) = ''  
+        THEN NULL  
+        ELSE RTRIM(d.[Tantosha_CD])  
+        END  
+      ELSE NULL  
+      END AS [Tantosha_CD]  
+     ,CASE WHEN RTRIM(c.[Shisetsu_KJ]) = ''  
+       THEN NULL  
+       ELSE SUBSTRING(REPLACE(RTRIM(c.[Shisetsu_KJ]),'?','　'),1,20)  
+       END AS [Shisetsu_KJ]  
+     ,CASE WHEN RTRIM(c.[Shisetsu_KJR]) = ''  
+       THEN NULL  
+       ELSE SUBSTRING(REPLACE(RTRIM(c.[Shisetsu_KJR]),'?','　'),1,10)  
+       END AS [Shisetsu_KJR]  
+     ,CASE WHEN RTRIM(c.[Shisetsu_KN]) = ''  
+       THEN NULL  
+       ELSE SUBSTRING(REPLACE(RTRIM(c.[Shisetsu_KN]),'?','　'),1,25)  
+       END AS [Shisetsu_KN]  
+     ,CASE WHEN RTRIM(c.[Heihai_KBN]) = ''  
+       THEN NULL  
+       ELSE RTRIM(c.[Heihai_KBN])  
+       END AS [Heihai_KBN]  
+     FROM  
+      PVS_M_SHISETSU AS c  
+  
+     LEFT JOIN   
+      (  
+      SELECT  
+        [Shisetsu_CD]  
+       ,MIN([Tantosha_CD]) AS [Tantosha_CD]  
+      FROM  
+       dbo.PVS_XF_GetYuko_M_SHISETSU_TANTO(CONVERT(DATE,@tag_date3))  
+      WHERE  
+       [Tantosha_KBN] = 'PVS_T0001'  
+      AND Corp_ID = 'ECL'  
+      GROUP BY  
+       [Shisetsu_CD]  
+      ) d  
+     ON c.Shisetsu_CD = d.Shisetsu_CD  
+  
+     LEFT JOIN   
+      (  
+      SELECT  
+        [Shisetsu_CD]  
+       ,MIN([Tantosha_CD]) AS [Tantosha_CD]  
+      FROM  
+       dbo.PVS_XF_GetYuko_M_SHISETSU_TANTO(CONVERT(DATE,@tag_date3))  
+      WHERE  
+       [Tantosha_KBN] = 'PVS_T0002'  
+      AND Corp_ID = 'ECL'  
+      GROUP BY  
+       [Shisetsu_CD]  
+      ) e  
+     ON c.Shisetsu_CD = e.Shisetsu_CD  
+  
+     WHERE  
+      c.[Heihai_KBN] <> 'D'  
+     AND c.[Shisetsu_CD] + CONVERT(VARCHAR(8),[TekiyoKaishi_DT],112) IN  
+      (  
+      SELECT  
+       a.[Shisetsu_CD] + CONVERT(VARCHAR(8),MAX(a.TekiyoKaishi_DT),112)  
+      FROM  
+       PVS_M_SHISETSU AS a  
+      WHERE   
+       a.[TekiyoKaishi_DT] <= CONVERT(DATE,@tag_date3)  
+      AND a.[Del_FLG] = '0'  
+      GROUP BY  
+       a.[Shisetsu_CD]  
+      )  
+     AND c.TekiyoShuryo_DT >= CONVERT(DATE,@tag_date3)  
+  
+     --ログ出力（詳細）  
+     SET @ins_cnt = @@ROWCOUNT  
+     SET @step = @step + 10  
+     exec @val = PVZ_XP_9001 @progname, 'DTL', 0, @step, 'ワークデータ作成 - 次月(現行保証施設)', @ins_cnt, @upd_cnt, @del_cnt, @message  
+     if @val <> 0  
+      begin  
+       RAISERROR ('', 11, 1)  
+      end  
+     SET @ins_cnt = 0  
+     SET @upd_cnt = 0  
+     SET @del_cnt = 0  
+  
+    end  
+   else  
+    begin  
+     INSERT INTO  
+      #WK_GT_SST  
+     SELECT  
+      c.[Shisetsu_CD]  
+      ,CASE WHEN RTRIM(c.[ShisetsuIyaku_KBN]) = '1'  
+      /* 医の場合（医薬区分："1"） */  
+       THEN CASE WHEN RTRIM(e.[Tantosha_CD]) = ''  
+        THEN NULL  
+        ELSE RTRIM(e.[Tantosha_CD])  
+        END  
+        WHEN RTRIM(c.[ShisetsuIyaku_KBN]) = '2'  
+      /* 薬の場合（医薬区分："2"） */  
+       THEN CASE WHEN RTRIM(d.[Tantosha_CD]) = ''  
+        THEN NULL  
+        ELSE RTRIM(d.[Tantosha_CD])  
+        END  
+      ELSE NULL  
+      END AS [Tantosha_CD]  
+      ,CASE WHEN RTRIM(c.[Shisetsu_KJ]) = ''  
+        THEN NULL  
+        ELSE SUBSTRING(REPLACE(RTRIM(c.[Shisetsu_KJ]),'?','　'),1,20)  
+        END AS [Shisetsu_KJ]  
+      ,CASE WHEN RTRIM(c.[Shisetsu_KJR]) = ''  
+        THEN NULL  
+        ELSE SUBSTRING(REPLACE(RTRIM(c.[Shisetsu_KJR]),'?','　'),1,10)  
+        END AS [Shisetsu_KJR]  
+      ,CASE WHEN RTRIM(c.[Shisetsu_KN]) = ''  
+        THEN NULL  
+        ELSE SUBSTRING(REPLACE(RTRIM(c.[Shisetsu_KN]),'?','　'),1,25)  
+        END AS [Shisetsu_KN]  
+      ,CASE WHEN RTRIM(c.[Heihai_KBN]) = ''  
+        THEN NULL  
+        ELSE RTRIM(c.[Heihai_KBN])  
+        END AS [Heihai_KBN]  
+     FROM  
+      PVS_M_SHISETSU AS c  
+  
+     LEFT JOIN   
+      (  
+      SELECT  
+        [Shisetsu_CD]  
+       ,MIN([Tantosha_CD]) AS [Tantosha_CD]  
+      FROM  
+       dbo.PVS_XF_GetYuko_M_SHISETSU_TANTO(CONVERT(DATE,@tag_date2))  
+      WHERE  
+       [Tantosha_KBN] = 'PVS_T0001'  
+      AND Corp_ID = 'ECL'  
+      GROUP BY  
+       [Shisetsu_CD]  
+      ) d  
+     ON c.Shisetsu_CD = d.Shisetsu_CD  
+  
+     LEFT JOIN   
+      (  
+      SELECT  
+        [Shisetsu_CD]  
+       ,MIN([Tantosha_CD]) AS [Tantosha_CD]  
+      FROM  
+       dbo.PVS_XF_GetYuko_M_SHISETSU_TANTO(CONVERT(DATE,@tag_date2))  
+      WHERE  
+       [Tantosha_KBN] = 'PVS_T0002'  
+      AND Corp_ID = 'ECL'  
+      GROUP BY  
+       [Shisetsu_CD]  
+      ) e  
+     ON c.Shisetsu_CD = e.Shisetsu_CD  
+  
+     WHERE  
+      c.[Heihai_KBN] <> 'D'  
+     AND c.[Shisetsu_CD] + CONVERT(VARCHAR(8),c.[TekiyoKaishi_DT],112) IN  
+      (  
+      SELECT  
+       a.[Shisetsu_CD] + CONVERT(VARCHAR(8),MAX(a.TekiyoKaishi_DT),112)  
+      FROM  
+       PVS_M_SHISETSU AS a  
+      WHERE   
+       a.[TekiyoKaishi_DT] <= CONVERT(DATE,@tag_date2)  
+      AND a.[Del_FLG] = '0'  
+      GROUP BY  
+       a.[Shisetsu_CD]  
+      )  
+     AND c.TekiyoShuryo_DT >= CONVERT(DATE,@tag_date2)  
+  
+     --ログ出力（詳細）  
+     SET @ins_cnt = @@ROWCOUNT  
+     SET @step = @step + 10  
+     exec @val = PVZ_XP_9001 @progname, 'DTL', 0, @step, 'ワークデータ作成 - 当月(現行保証施設)', @ins_cnt, @upd_cnt, @del_cnt, @message  
+     if @val <> 0  
+      begin  
+       RAISERROR ('', 11, 1)  
+      end  
+     SET @ins_cnt = 0  
+     SET @upd_cnt = 0  
+     SET @del_cnt = 0  
+  
+    end  
+--  2023/01/30 再作成のためADD　終了２  
+  
+   --ワーク削除  
+   set @del_cnt = (select count (*) from PVS_GW_LKLDDS01)  
+   TRUNCATE TABLE PVS_GW_LKLDDS01  
+  
+   --ログ出力（詳細）  
+   set @step = @step + 10  
+   exec @val = PVZ_XP_9001 @progname, 'DTL', 0, @step, 'PVS_GW_LKLDDS01', @ins_cnt, @upd_cnt, @del_cnt, @message  
+   if @val <> 0  
+    begin  
+     RAISERROR ('', 11, 1)  
+    end  
+     
+   SET @ins_cnt = 0  
+   SET @upd_cnt = 0  
+   SET @del_cnt = 0     
+  
+   --ワークデータ作成  
+   INSERT INTO PVS_GW_LKLDDS01  
+   SELECT  
+    dbo.PVZ_XF_ValuePad('','7','R',' ')  
+    ,nullif(rtrim(si.Shisetsu_CD), space(0))    --2013/01/29 CSV空文字対応  
+    ,dbo.PVZ_XF_ValuePad(s1.Shisetsu_KJ,'20','R','　')  
+    ,dbo.PVZ_XF_ValuePad(s1.Shisetsu_KJR,'10','R','　')  
+    ,dbo.PVZ_XF_ValuePad(s1.Shisetsu_KN,'25','R',' ')  
+    ,nullif(rtrim(substring(si.Jusho_CD,1,2)), space(0))   --2013/01/29 CSV空文字対応  
+    ,dbo.PVZ_XF_ValuePad(si.Yubinbango,'8','R',' ')  
+    ,substring(dbo.PVZ_XF_ValuePad(si.Jusho_KJ,'100','R','　'),1,45) --s1からsiに変更、LENGTHを45文字へ（2013/1/24市川）  
+    ,dbo.PVZ_XF_ValuePad(si.TEL_NO_1,'13','R',' ')  --s1からsiに変更（2013/1/24市川）  
+    ,dbo.PVZ_XF_ValuePad(si.FAX_NO_1,'20','R',' ')  --s1からsiに変更（2013/1/24市川）  
+    ,dbo.PVZ_XF_ValuePad('','6','R',' ')  
+    ,dbo.PVZ_XF_ValuePad('','20','R',' ')  
+    ,' '  
+    ,dbo.PVZ_XF_ValuePad('','2','R',' ')  
+    ,dbo.PVZ_XF_ValuePad('','2','R',' ')  
+    ,dbo.PVZ_XF_ValuePad('','6','R',' ')  
+    ,nullif(rtrim(convert(varchar(10),GETDATE(),111)), space(0)) --2013/01/29 CSV空文字対応  
+    ,nullif(rtrim(  
+     CASE  
+     WHEN s1.Heihai_KBN = 'D'   --siからs1に変更（2013/1/23市川）  
+       THEN '1'  
+     ELSE '0'  
+     END  
+     ), space(0)) AS del_flg     --2013/01/29 CSV空文字対応  
+      
+   FROM  
+   (  
+--2014/04/07 施設マスタの差分抽出方法を更新日から項目比較に変更  
+    SELECT  
+     a.Shisetsu_CD,  
+     a.SeishikiShisetsuMei_KJ,  
+     a.RyakushikiShisetsuMei_KJ,  
+     a.SeishikiShisetsuMei_KN,  
+     a.Jusho_CD,  
+     a.Yubinbango,  
+     a.Jusho_KJ,  
+     a.TEL_NO_1,  
+     a.FAX_NO_1,  
+     a.Heihai_KBN  
+    FROM  
+     PVS_OM_SHISETSU_ALL                   as a  
+    left outer join  
+     PVS_OM_SHISETSU_ALL                   as b  
+      on  
+       b.Iyaku_KBN      = '1'            and  
+       convert(date, dateadd(hour, -5, @Zen_date)) between b.TekiyoKaishi_DT and b.TekiyoShuryo_DT  and  
+       a.Shisetsu_CD     = b.Shisetsu_CD  
+    where  
+     a.Iyaku_KBN = '1'                   and   --医療機関のみI/F  
+     @tag_date between a.TekiyoKaishi_DT and a.TekiyoShuryo_DT         and  
+     (  
+      a.SeishikiShisetsuMei_KJ   <> isnull(b.SeishikiShisetsuMei_KJ, '')    or  
+      a.RyakushikiShisetsuMei_KJ   <> isnull(b.RyakushikiShisetsuMei_KJ, '')   or  
+      a.SeishikiShisetsuMei_KN   <> isnull(b.SeishikiShisetsuMei_KN, '')    or  
+      rtrim(substring(a.Jusho_CD,1,2)) <> isnull(rtrim(substring(b.Jusho_CD,1,2)), '')  or  
+      a.Yubinbango      <> isnull(b.Yubinbango, '')       or  
+      a.Jusho_KJ       <> isnull(b.Jusho_KJ, '')       or  
+      a.TEL_NO_1       <> isnull(b.TEL_NO_1, '')       or  
+      a.FAX_NO_1       <> isnull(b.FAX_NO_1, '')  
+     )  
+--     AND a.TekiyoKaishi_DT <= @tag_date  
+--     AND a.TekiyoShuryo_DT >= @tag_date  
+--     AND Koshin_DT > @Zen_date  
+   ) AS si  
+     
+  
+   INNER JOIN  
+    #WK_GT_SST AS s1      --PVS_GT_SHISETSU_1 or 2  
+   ON   
+    si.Shisetsu_CD = s1.Shisetsu_CD  
+  
+   INNER JOIN(        --架空担当者区分  
+     select * from PVS_XF_GetYuko_D_TANTOSHA(@tag_date)  --0:MR,1:新人,2:複数のみ対象。  
+     where KakuTantosha_KBN in ('0','1','2')     
+    ) t          
+   on s1.tantosha_CD = t.tantosha_CD       
+  
+  
+  -- ORDER BY  
+  --  si.Shisetsu_CD  
+  
+  
+   SET @ins_cnt = @@ROWCOUNT  
+     
+   --ログ出力（詳細）  
+   set @step = @step + 10  
+   exec @val = PVZ_XP_9001 @progname, 'DTL', 0, @step, 'PVS_GW_LKLDDS01', @ins_cnt, @upd_cnt, @del_cnt, @message  
+   if @val <> 0  
+    begin  
+     RAISERROR ('', 11, 1)  
+    end  
+  
+  
+-- ARTディティールアロケーション向上対応（2013/05/10)START  
+SET @ins_cnt = 0  
+SET @upd_cnt = 0  
+SET @del_cnt = 0  
+  
+DELETE from PVS_GW_LKLDDS01  
+where Shisetsu_CD like '_____Z'  
+  
+SET @del_cnt = @@ROWCOUNT  
+     
+--ログ出力（詳細）  
+set @step = @step + 10  
+exec @val = PVZ_XP_9001 @progname, 'DTL', 0, @step, 'PVS_GW_LKLDDS01', @ins_cnt, @upd_cnt, @del_cnt, @message  
+if @val <> 0  
+ begin  
+  RAISERROR ('', 11, 1)  
+ end  
+  
+-- ARTディティールアロケーション向上対応（2013/05/10)END  
+  
+  
+     
+   SET @ins_cnt = 0  
+   SET @upd_cnt = 0  
+   SET @del_cnt = 0   
+     
+   UPDATE PVZ_GT_SKMINTFMGMT  
+   SET  
+    SENDRECVDH = GETDATE()      
+   WHERE  
+    FILEID = 'LKLDDS01'  
+       
+   SET @upd_cnt = @@ROWCOUNT  
+     
+   --ログ出力（詳細）  
+   set @step = @step + 10  
+   exec @val = PVZ_XP_9001 @progname, 'DTL', 0, @step, 'PVZ_GT_SKMINTFMGMT', @ins_cnt, @upd_cnt, @del_cnt, @message  
+   if @val <> 0  
+    begin  
+     RAISERROR ('', 11, 1)  
+    end  
+     
+   SET @ins_cnt = 0  
+   SET @upd_cnt = 0  
+   SET @del_cnt = 0   
+  
+   -- 一時ワークを明示的に削除  
+   DROP TABLE #WK_GT_SST  
+  
+   --戻り値設定（正常）  
+   set @ret = 0  
+   set @o_ret = @ret  
+   --ログ出力（終了）  
+   set @step = @step + 10  
+   exec @val = PVZ_XP_9001 @progname, 'END', @ret, @step, '', 0, 0, 0, ''  
+   if @val <> 0  
+    begin  
+     RAISERROR ('', 11, 1)  
+    end  
+  
+   -- コミット  
+   commit transaction  
+  
+ END TRY  
+ BEGIN CATCH  
+  
+  -- トランザクションのロールバック  
+  IF @@TRANCOUNT>0  
+   BEGIN  
+    ROLLBACK TRANSACTION  
+   END  
+      
+   --ワーク削除  
+   set @del_cnt = (select count (*) from PVS_GW_LKLDDS01)  
+   TRUNCATE TABLE PVS_GW_LKLDDS01  
+  
+   --ログ出力（詳細）  
+   set @step = @step + 10  
+   exec @val = PVZ_XP_9001 @progname, 'DTL', 0, @step, 'PVS_GW_LKLDDS01', @ins_cnt, @upd_cnt, @del_cnt, @message  
+   if @val <> 0  
+    begin  
+     RAISERROR ('', 11, 1)  
+    end  
+     
+   SET @ins_cnt = 0  
+   SET @upd_cnt = 0  
+   SET @del_cnt = 0     
+     
+   --戻り値設定（異常）  
+   set @ret = 2  
+   set @o_ret = @ret  
+  
+   --ログ出力  
+   set @message = @message + isnull (ERROR_MESSAGE (), '')  
+   exec @val = PVZ_XP_9001 @progname, 'ERR', @ret, @step, '', 0, 0, 0, @message  
+   exec @val = PVZ_XP_9001 @progname, 'END', @ret, @step, '', 0, 0, 0, ''   
+  
+ END CATCH  
+END  
+  
+  
